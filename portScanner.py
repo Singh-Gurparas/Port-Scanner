@@ -1,31 +1,51 @@
 import socket
+from colorama import Fore, Style, init
+from datetime import datetime
+import time
 
-# Function to scan a specific port
-def scan_port(ip, port):
-    scanner = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    scanner.settimeout(1)  # Set timeout for each attempt
-    result = scanner.connect_ex((ip, port))  # 0 if port is open, error code otherwise
-    scanner.close()
-    return result == 0
+# Initialize colorama
+init(autoreset=True)
 
-# Function to scan a range of ports
-def port_scanner(ip, start_port, end_port):
-    print(f"Scanning IP: {ip} from port {start_port} to {end_port}")
-    
-    open_ports = []
-    for port in range(start_port, end_port + 1):
-        if scan_port(ip, port):
-            print(f"Port {port} is open")
-            open_ports.append(port)
-        else:
-            print(f"Port {port} is closed")
-    
-    print("\nOpen Ports:", open_ports)
+def get_service_name(port):
+    try:
+        return socket.getservbyport(port)
+    except:
+        return "Unknown"
 
-# User input for target IP and port range
-ip_address = input("Enter IP address to scan: ")
-start_port = int(input("Enter starting port: "))
-end_port = int(input("Enter ending port: "))
+def scan_ports(target, ports):
+    try:
+        ip = socket.gethostbyname(target)
+        print(f"\n{Fore.CYAN}Target: {target}")
+        print(f"IP Address: {ip}")
+        print(f"Scan started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{Style.RESET_ALL}\n")
 
-# Run the port scanner
-port_scanner(ip_address, start_port, end_port)
+        for port in ports:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+            start = time.time()
+            result = sock.connect_ex((target, port))
+            end = time.time()
+            duration = round((end - start) * 1000, 2)  # in milliseconds
+            service = get_service_name(port)
+
+            if result == 0:
+                print(f"{Fore.GREEN}[OPEN] Port {port:<5} | Service: {service:<10} | Response: {duration} ms")
+            else:
+                print(f"{Fore.RED}[CLOSED] Port {port:<5} | Service: {service:<10} | Response: {duration} ms")
+            sock.close()
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}[!] Scan interrupted by user.")
+    except socket.gaierror:
+        print(f"{Fore.RED}[!] Could not resolve hostname.")
+    except socket.error:
+        print(f"{Fore.RED}[!] Could not connect to server.")
+
+def main():
+    print(f"{Fore.BLUE}🔍 Advanced Python Port Scanner 🔍{Style.RESET_ALL}")
+    target = input("Enter target (IP or domain): ").strip()
+
+    common_ports = [21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 8080, 8443]
+    scan_ports(target, common_ports)
+
+if __name__ == "__main__":
+    main()
